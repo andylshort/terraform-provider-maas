@@ -47,7 +47,7 @@ resource "maas_instance" "kvm" {
 
 ### Read-Only
 
-- `architecture` (String) The the deployed MAAS machine architecture.
+- `architecture` (String) The deployed MAAS machine architecture.
 - `cpu_count` (Number) The number of CPU cores of the deployed MAAS machine.
 - `fqdn` (String) The deployed MAAS machine FQDN.
 - `hostname` (String) The deployed MAAS machine hostname.
