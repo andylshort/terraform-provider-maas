@@ -110,6 +110,11 @@ func resourceMAASMachine() *schema.Resource {
 				Computed:    true,
 				Description: "The machine hostname. This is computed if it's not set.",
 			},
+			"is_dpu": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "A flag to set whether this machine is a DPU or not.",
+			},
 			"min_hwe_kernel": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -226,6 +231,7 @@ func resourceMachineRead(ctx context.Context, d *schema.ResourceData, meta any) 
 		"domain":         machine.Domain.Name,
 		"zone":           machine.Zone.Name,
 		"pool":           machine.Pool.Name,
+		"is_dpu":         machine.DPU,
 	}
 	if err := setTerraformState(d, tfState); err != nil {
 		return diag.FromErr(err)
@@ -307,6 +313,7 @@ func getMachineParams(d *schema.ResourceData) *entity.MachineParams {
 		Domain:       d.Get("domain").(string),
 		Zone:         d.Get("zone").(string),
 		Pool:         d.Get("pool").(string),
+		DPU:          d.Get("is_dpu").(bool),
 	}
 }
 
