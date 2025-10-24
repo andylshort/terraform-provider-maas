@@ -71,6 +71,7 @@ func TestAccResourceMAASInstance_basic(t *testing.T) {
 		resource.TestCheckResourceAttr("maas_instance.test", "hostname", hostname),
 		resource.TestCheckResourceAttr("maas_instance.test", "memory", "4096"),
 		resource.TestCheckResourceAttr("maas_instance.test", "cpu_count", "1"),
+		resource.TestCheckResourceAttr("maas_instance.test", "architecture", "amd64/generic"),
 	}
 
 	resource.ParallelTest(t, resource.TestCase{
