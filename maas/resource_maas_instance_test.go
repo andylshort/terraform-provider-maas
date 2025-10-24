@@ -30,6 +30,7 @@ func TestAccResourceMAASInstance_basic(t *testing.T) {
 		resource.TestCheckResourceAttr("maas_instance.test", "hostname", hostname),
 		resource.TestCheckResourceAttr("maas_instance.test", "memory", "4096"),
 		resource.TestCheckResourceAttr("maas_instance.test", "cpu_count", "1"),
+		resource.TestCheckResourceAttr("maas_instance.test", "architecture", "amd64/generic"),
 	}
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -176,7 +177,7 @@ resource "maas_vm_host_machine" "test" {
 
 func testAccMAASInstanceConfigBasic(vmHost, hostname string) string {
 	return fmt.Sprintf(`
-%s 
+%s
 
 resource "maas_instance" "test" {
   allocate_params {
@@ -197,7 +198,7 @@ resource "maas_instance" "test" {
     erase        = %q
     force        = %q
     quick_erase  = %q
-    secure_erase = %q	
+    secure_erase = %q
   }
 
   allocate_params {
