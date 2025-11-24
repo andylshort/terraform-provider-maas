@@ -68,7 +68,7 @@ func TestAccResourceMAASInstance_basic(t *testing.T) {
 	secureErase := "false"
 
 	nonDefaultArchitecture := "arm64/generic"
-	archError, _ := regexp.Compile("Architecture not recognised")
+	archError := regexp.MustCompile("Architecture not recognised")
 
 	baseChecks := []resource.TestCheckFunc{
 		testAccMAASInstanceCheckExists("maas_instance.test"),
