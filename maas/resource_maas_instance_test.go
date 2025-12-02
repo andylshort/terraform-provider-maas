@@ -94,12 +94,7 @@ func TestAccResourceMAASInstance_basic(t *testing.T) {
 			},
 			// Test different architecture
 			{
-				Config: testAccMAASInstanceConfigAllocateParamsNonDefaultArchitecture(vmHost, hostname, nonDefaultArchitecture),
-				Check: resource.ComposeTestCheckFunc(append(
-					baseChecks,
-					resource.TestCheckResourceAttr("maas_instance.test", "architecture", nonDefaultArchitecture),
-				)...,
-				),
+				Config:      testAccMAASInstanceConfigAllocateParamsNonDefaultArchitecture(vmHost, hostname, nonDefaultArchitecture),
 				ExpectError: archError,
 			},
 			// Test update
