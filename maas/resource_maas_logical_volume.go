@@ -91,6 +91,7 @@ func resourceLogicalVolumeCreate(ctx context.Context, d *schema.ResourceData, me
 		if newErr != nil {
 			return diag.FromErr(newErr)
 		}
+
 		return diag.FromErr(err)
 	}
 
@@ -211,10 +212,6 @@ func formatAndMountVirtualBlockDevice(client *client.Client, virtualBlockDevice 
 		}
 	}
 
-<<<<<<< Updated upstream
-	if d.Get("mount_point") != nil {
-		virtualBlockDevice, err = client.BlockDevice.Mount(virtualBlockDevice.SystemID, virtualBlockDevice.ID, d.Get("mount_point").(string), d.Get("mount_options").(string))
-=======
 	// Mount the device if mount_point is specified
 	if mountPoint := d.Get("mount_point").(string); mountPoint != "" {
 		// Ensure fs_type is specified when mount_point is set
@@ -223,9 +220,8 @@ func formatAndMountVirtualBlockDevice(client *client.Client, virtualBlockDevice 
 		}
 
 		mountOptions := d.Get("mount_options").(string)
-		virtualBlockDevice, err = client.BlockDevice.Mount(virtualBlockDevice.SystemID, virtualBlockDevice.ID, mountPoint, mountOptions)
 
->>>>>>> Stashed changes
+		virtualBlockDevice, err = client.BlockDevice.Mount(virtualBlockDevice.SystemID, virtualBlockDevice.ID, mountPoint, mountOptions)
 		if err != nil {
 			return nil, err
 		}
