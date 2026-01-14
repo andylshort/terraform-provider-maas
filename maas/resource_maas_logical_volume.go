@@ -65,6 +65,14 @@ func resourceMAASLogicalVolume() *schema.Resource {
 func resourceLogicalVolumeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*ClientConfig).Client
 
+	// Validate the file system and mounting information before attempting to create the logical volume
+	// If a mount point is specified, then fs_type is required
+	if mountPoint := d.Get("mount_point").(string); mountPoint != "" {
+		if d.Get("fs_type").(string) == "" {
+			return diag.Errorf("invalid block device mount configuration: fs_type must be specified when mount_point is set")
+		}
+	}
+
 	machine, err := getMachine(client, d.Get("machine").(string))
 	if err != nil {
 		return diag.FromErr(err)
@@ -87,11 +95,6 @@ func resourceLogicalVolumeCreate(ctx context.Context, d *schema.ResourceData, me
 
 	formattedDevice, err := formatAndMountVirtualBlockDevice(client, createdLVM, d)
 	if err != nil {
-		newErr := client.VolumeGroup.DeleteLogicalVolume(machine.SystemID, volumeGroup.ID, createdLVM.ID)
-		if newErr != nil {
-			return diag.FromErr(newErr)
-		}
-
 		return diag.FromErr(err)
 	}
 
@@ -205,25 +208,22 @@ func resourceLogicalVolumeRead(ctx context.Context, d *schema.ResourceData, meta
 
 func formatAndMountVirtualBlockDevice(client *client.Client, virtualBlockDevice *entity.BlockDevice, d *schema.ResourceData) (*entity.BlockDevice, error) {
 	var err error
-	if d.Get("fs_type") != nil {
-		virtualBlockDevice, err = client.BlockDevice.Format(virtualBlockDevice.SystemID, virtualBlockDevice.ID, d.Get("fs_type").(string))
+
+	// Format the device if fs_type is specified
+	if fsType := d.Get("fs_type").(string); fsType != "" {
+		virtualBlockDevice, err = client.BlockDevice.Format(virtualBlockDevice.SystemID, virtualBlockDevice.ID, fsType)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to format block device: %w", err)
 		}
 	}
 
 	// Mount the device if mount_point is specified
 	if mountPoint := d.Get("mount_point").(string); mountPoint != "" {
-		// Ensure fs_type is specified when mount_point is set
-		if d.Get("fs_type").(string) == "" {
-			return nil, fmt.Errorf("cannot mount block device: fs_type must be specified when mount_point is set")
-		}
-
 		mountOptions := d.Get("mount_options").(string)
 
 		virtualBlockDevice, err = client.BlockDevice.Mount(virtualBlockDevice.SystemID, virtualBlockDevice.ID, mountPoint, mountOptions)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to mount block device: %w", err)
 		}
 	}
 

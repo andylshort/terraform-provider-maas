@@ -88,7 +88,7 @@ func TestAccResourceMAASLogicalVolume_formatAndMount(t *testing.T) {
 			// Test 1: `fs_type` not specified
 			{
 				Config:      testAccLogicalVolume(blockDevice1Name, blockDevice2Name, volumeGroupName, machine, test1FsType, test1Name, test1Size, test1MountPoint),
-				ExpectError: regexp.MustCompile(`cannot mount block device: fs_type must be specified when mount_point is set`),
+				ExpectError: regexp.MustCompile(`invalid block device mount configuration: fs_type must be specified when mount_point is set`),
 			},
 			// Test 2: `mount_point` not specified
 			{
