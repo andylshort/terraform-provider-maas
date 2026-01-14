@@ -35,7 +35,7 @@ func resourceMAASLogicalVolume() *schema.Resource {
 			"mount_options": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Comma seperated options used for the logical volume mount.",
+				Description: "Comma separated options used for the logical volume mount.",
 			},
 			"mount_point": {
 				Type:        schema.TypeString,
