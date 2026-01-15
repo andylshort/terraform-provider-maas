@@ -13,16 +13,17 @@ import (
 	"terraform-provider-maas/maas/testutils"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestAccResourceMAASRAID_basic(t *testing.T) {
 	machine := os.Getenv("TF_ACC_BLOCK_DEVICE_MACHINE")
-	blockDevice1Name := "raid_bd1"
-	blockDevice2Name := "raid_bd2"
-	blockDevice3Name := "raid_bd3"
-	blockDevice4Name := "raid_bd4"
+	blockDevice1Name := acctest.RandomWithPrefix("tf-raid-bd")
+	blockDevice2Name := acctest.RandomWithPrefix("tf-raid-bd")
+	blockDevice3Name := acctest.RandomWithPrefix("tf-raid-bd")
+	blockDevice4Name := acctest.RandomWithPrefix("tf-raid-bd")
 
 	// RAID 1 has the smallest disk requirement that still allows testing hot spares.
 	level := "1"
@@ -137,21 +138,19 @@ func TestAccResourceMAASRAID_basic(t *testing.T) {
 
 func TestAccResourceMAASRAID_formatAndMount(t *testing.T) {
 	machine := os.Getenv("TF_ACC_BLOCK_DEVICE_MACHINE")
-	blockDevice1Name := "raid_bd1"
-	blockDevice2Name := "raid_bd2"
-	blockDevice3Name := "raid_bd3"
-	blockDevice4Name := "raid_bd4"
+	blockDevice1Name := acctest.RandomWithPrefix("tf-raid-bd")
+	blockDevice2Name := acctest.RandomWithPrefix("tf-raid-bd")
+	blockDevice3Name := acctest.RandomWithPrefix("tf-raid-bd")
+	blockDevice4Name := acctest.RandomWithPrefix("tf-raid-bd")
 
 	// RAID 1 has the smallest disk requirement that still allows testing hot spares.
 	level := "1"
 
 	// Test 1: `fs_type` not specified
-	test1Name := "test RAID"
 	test1FsType := ""
 	test1MountPoint := "/var/raidtest"
 
 	// Test 2: `mount_point` not specified
-	test2Name := "test RAID"
 	test2FsType := "ext4"
 	test2MountPoint := ""
 
@@ -171,7 +170,7 @@ func TestAccResourceMAASRAID_formatAndMount(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Test initial creation
 			{
-				Config: baseConfig + testAccRAIDConfig(test1Name, level, test1FsType, test1MountPoint,
+				Config: baseConfig + testAccRAIDConfig("RAID", level, test1FsType, test1MountPoint,
 					generateRAIDBlockDevices([]string{blockDevice1Name}),
 					generateRAIDPartitions([]string{blockDevice2Name}),
 					[]string{},
@@ -180,7 +179,7 @@ func TestAccResourceMAASRAID_formatAndMount(t *testing.T) {
 				ExpectError: regexp.MustCompile(`invalid block device mount configuration: fs_type must be specified when mount_point is set`),
 			},
 			{
-				Config: baseConfig + testAccRAIDConfig(test2Name, level, test2FsType, test2MountPoint,
+				Config: baseConfig + testAccRAIDConfig("RAID", level, test2FsType, test2MountPoint,
 					generateRAIDBlockDevices([]string{blockDevice1Name}),
 					generateRAIDPartitions([]string{blockDevice2Name}),
 					[]string{},
@@ -188,7 +187,7 @@ func TestAccResourceMAASRAID_formatAndMount(t *testing.T) {
 				),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRAIDExists("maas_raid.test"),
-					resource.TestCheckResourceAttr("maas_raid.test", "name", test2Name),
+					resource.TestCheckResourceAttr("maas_raid.test", "name", "test RAID"),
 					resource.TestCheckResourceAttr("maas_raid.test", "level", level),
 					resource.TestCheckResourceAttr("maas_raid.test", "fs_type", test2FsType),
 					resource.TestCheckResourceAttr("maas_raid.test", "mount_point", test2MountPoint),
