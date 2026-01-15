@@ -42,7 +42,7 @@ func TestAccResourceMAASRAID_basic(t *testing.T) {
 
 	// we include a separate unused boot disk to avoid the boot disk/partition behavior
 	baseConfig := testAccRAIDMachine(machine) +
-		testAccRAIDBlockDevice("boot", 2, true) +
+		testAccRAIDBlockDevice(acctest.RandomWithPrefix("boot"), 2, true) +
 		testAccRAIDBlockDevice(blockDevice1Name, 2, false) +
 		testAccRAIDPartition(blockDevice2Name, 2, false) +
 		testAccRAIDBlockDevice(blockDevice3Name, 2, false) +
@@ -156,7 +156,7 @@ func TestAccResourceMAASRAID_formatAndMount(t *testing.T) {
 
 	// we include a separate unused boot disk to avoid the boot disk/partition behavior
 	baseConfig := testAccRAIDMachine(machine) +
-		testAccRAIDBlockDevice("boot", 2, true) +
+		testAccRAIDBlockDevice(acctest.RandomWithPrefix("boot"), 2, true) +
 		testAccRAIDBlockDevice(blockDevice1Name, 2, false) +
 		testAccRAIDPartition(blockDevice2Name, 2, false) +
 		testAccRAIDBlockDevice(blockDevice3Name, 2, false) +
@@ -187,7 +187,7 @@ func TestAccResourceMAASRAID_formatAndMount(t *testing.T) {
 				),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRAIDExists("maas_raid.test"),
-					resource.TestCheckResourceAttr("maas_raid.test", "name", "test RAID"),
+					resource.TestCheckResourceAttr("maas_raid.test", "name", "RAID"),
 					resource.TestCheckResourceAttr("maas_raid.test", "level", level),
 					resource.TestCheckResourceAttr("maas_raid.test", "fs_type", test2FsType),
 					resource.TestCheckResourceAttr("maas_raid.test", "mount_point", test2MountPoint),
