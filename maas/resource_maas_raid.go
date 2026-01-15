@@ -98,7 +98,7 @@ func resourceMAASRAID() *schema.Resource {
 func resourceRAIDCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*ClientConfig).Client
 
-	// Validate the file system and mounting information before attempting to create the logical volume
+	// Validate the file system and mounting information before attempting to create the RAID
 	// If a mount point is specified, then fs_type is required
 	if mountPoint := d.Get("mount_point").(string); mountPoint != "" {
 		if d.Get("fs_type").(string) == "" {
