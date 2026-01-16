@@ -17,9 +17,9 @@ import (
 
 func TestAccResourceMAASLogicalVolume_basic(t *testing.T) {
 	machine := os.Getenv("TF_ACC_BLOCK_DEVICE_MACHINE")
-	blockDevice1Name := acctest.RandomWithPrefix("tf")
-	blockDevice2Name := acctest.RandomWithPrefix("tf")
-	volumeGroupName := acctest.RandomWithPrefix("tf")
+	blockDevice1Name := acctest.RandomWithPrefix("tf-lv-bd")
+	blockDevice2Name := acctest.RandomWithPrefix("tf-lv-bd")
+	volumeGroupName := acctest.RandomWithPrefix("tf-lv-vg")
 
 	fsType := "ext4"
 	name := "LVM test"
@@ -67,6 +67,8 @@ func TestAccResourceMAASLogicalVolume_formatAndMount(t *testing.T) {
 	blockDevice2Name := acctest.RandomWithPrefix("tf-lv-bd")
 	volumeGroupName := acctest.RandomWithPrefix("tf-lv-vg")
 
+	name := "LVM format and mount test"
+
 	// Test 1: `fs_type` not specified
 	test1FsType := ""
 	test1MountPoint := "/var/test"
@@ -83,15 +85,15 @@ func TestAccResourceMAASLogicalVolume_formatAndMount(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Test 1: `fs_type` not specified
 			{
-				Config:      testAccLogicalVolume(blockDevice1Name, blockDevice2Name, volumeGroupName, machine, test1FsType, "LVM test", 5, test1MountPoint),
+				Config:      testAccLogicalVolume(blockDevice1Name, blockDevice2Name, volumeGroupName, machine, test1FsType, name, 5, test1MountPoint),
 				ExpectError: regexp.MustCompile(`invalid block device mount configuration: fs_type must be specified when mount_point is set`),
 			},
 			// Test 2: `mount_point` not specified
 			{
-				Config: testAccLogicalVolume(blockDevice1Name, blockDevice2Name, volumeGroupName, machine, test2FsType, "LVM test", 5, test2MountPoint),
+				Config: testAccLogicalVolume(blockDevice1Name, blockDevice2Name, volumeGroupName, machine, test2FsType, name, 5, test2MountPoint),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLogicalVolumeExists("maas_logical_volume.test"),
-					resource.TestCheckResourceAttr("maas_logical_volume.test", "name", "LVM test"),
+					resource.TestCheckResourceAttr("maas_logical_volume.test", "name", name),
 					resource.TestCheckResourceAttr("maas_logical_volume.test", "fs_type", test2FsType),
 					resource.TestCheckResourceAttr("maas_logical_volume.test", "mount_point", test2MountPoint),
 				),
