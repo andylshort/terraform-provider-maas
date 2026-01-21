@@ -45,15 +45,15 @@ func convertToStringSlice(field any) []string {
 	return result
 }
 
-func listAsString(stringList []interface{}) string {
+func listAsString(stringList []any) string {
 	if len(stringList) == 0 {
-		return "[]"
+		return ""
 	}
 
 	return listAsStringBase(stringList)
 }
 
-func listAsStringBase(stringList []interface{}) string {
+func listAsStringBase(stringList []any) string {
 	var asList []string
 	for _, listItem := range stringList {
 		asList = append(asList, listItem.(string))

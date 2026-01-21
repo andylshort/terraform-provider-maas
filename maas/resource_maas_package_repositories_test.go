@@ -129,6 +129,47 @@ func TestAccResourceMAASPackageRepository_basic(t *testing.T) {
 	)
 }
 
+func TestAccResourceMAASPackageRepository_validation(t *testing.T) {
+	ubuntuSecurityRepo := testAccUbuntuPackageRepository(
+		"test_ubuntu",
+		"security.ubuntu.com",
+		"",
+		"http://security.ubuntu.com/ubuntu",
+		false,
+		false,
+		[]string{},
+		[]string{},
+		[]string{},
+		[]string{},
+	)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testutils.PreCheck(t, nil) },
+		Providers:    testutils.TestAccProviders,
+		CheckDestroy: testAccCheckPackageRepositoryDestroy,
+		ErrorCheck:   func(err error) error { return err },
+		Steps: []resource.TestStep{
+			// Test security repo, disabled, with no architectures listed
+			{
+				Config: ubuntuSecurityRepo,
+				Check: resource.ComposeTestCheckFunc(
+					testAccPackageRepositoryCheckExists("maas_package_repository.test_ubuntu"),
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "name", "security.ubuntu.com"),
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "url", "http://security.ubuntu.com/ubuntu"),
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "disable_sources", "false"),
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "enabled", "false"),
+
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "arches.#", "0"),
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "components.#", "0"),
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "disabled_pockets.#", "0"),
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "distributions.#", "0"),
+				),
+			},
+		},
+	},
+	)
+}
+
 func testAccCustomPackageRepository(resourceName string, name string, key string, url string, disableSources bool, enabled bool, arches []string, components []string, disabledPockets []string, distributions []string) string {
 	return fmt.Sprintf(`
 resource "maas_package_repository" %q {
@@ -223,7 +264,7 @@ func testAccCheckPackageRepositoryDestroy(s *terraform.State) error {
 
 func listAsString(stringList []string) string {
 	if len(stringList) == 0 {
-		return "[]"
+		return ""
 	}
 
 	asList, _ := json.Marshal(stringList)
