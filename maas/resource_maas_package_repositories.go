@@ -129,6 +129,9 @@ func resourcePackageRepositoriesCreate(ctx context.Context, d *schema.ResourceDa
 		return diag.Errorf("`disabled_components` are used for Ubuntu repos, which cannot be created, only imported. Specify `components` for custom repos instead.")
 	}
 
+	enabledPtr := new(bool)
+	*enabledPtr = d.Get("enabled").(bool)
+
 	params := &entity.PackageRepositoryParams{
 		Name:               d.Get("name").(string),
 		URL:                d.Get("url").(string),
@@ -139,7 +142,7 @@ func resourcePackageRepositoriesCreate(ctx context.Context, d *schema.ResourceDa
 		Arches:             listAsString(d.Get("arches").(*schema.Set).List()),
 		Key:                d.Get("key").(string),
 		DisableSources:     d.Get("disable_sources").(bool),
-		Enabled:            d.Get("enabled").(bool),
+		Enabled:            enabledPtr,
 	}
 
 	repo, err := client.PackageRepositories.Create(params)
@@ -196,6 +199,9 @@ func resourcePackageRepositoriesUpdate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
+	enabledPtr := new(bool)
+	*enabledPtr = d.Get("enabled").(bool)
+
 	params := &entity.PackageRepositoryParams{
 		Name:               d.Get("name").(string),
 		URL:                d.Get("url").(string),
@@ -206,7 +212,7 @@ func resourcePackageRepositoriesUpdate(ctx context.Context, d *schema.ResourceDa
 		Arches:             listAsString(d.Get("arches").(*schema.Set).List()),
 		Key:                d.Get("key").(string),
 		DisableSources:     d.Get("disable_sources").(bool),
-		Enabled:            d.Get("enabled").(bool),
+		Enabled:            enabledPtr,
 	}
 
 	if _, err := client.PackageRepository.Update(id, params); err != nil {
