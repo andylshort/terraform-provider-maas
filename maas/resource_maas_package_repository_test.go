@@ -137,7 +137,7 @@ func TestAccResourceMAASPackageRepository_validation(t *testing.T) {
 		"http://security.ubuntu.com/ubuntu",
 		false,
 		false,
-		[]string{},
+		[]string{"amd64", "i386"},
 		[]string{},
 		[]string{},
 		[]string{},
@@ -159,7 +159,10 @@ func TestAccResourceMAASPackageRepository_validation(t *testing.T) {
 					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "disable_sources", "false"),
 					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "enabled", "false"),
 
-					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "arches.#", "0"),
+					// MAAS defaults to amd64 and i386 architectures if none specified
+					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "arches.#", "2"),
+					resource.TestCheckTypeSetElemAttr("maas_package_repository.test_ubuntu", "arches.*", "amd64"),
+					resource.TestCheckTypeSetElemAttr("maas_package_repository.test_ubuntu", "arches.*", "i386"),
 					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "components.#", "0"),
 					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "disabled_pockets.#", "0"),
 					resource.TestCheckResourceAttr("maas_package_repository.test_ubuntu", "distributions.#", "0"),
@@ -264,7 +267,7 @@ func testAccCheckPackageRepositoryDestroy(s *terraform.State) error {
 
 func listAsString(stringList []string) string {
 	if len(stringList) == 0 {
-		return ""
+		return "[]"
 	}
 
 	asList, _ := json.Marshal(stringList)
