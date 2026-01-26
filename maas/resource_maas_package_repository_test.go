@@ -137,7 +137,7 @@ func TestAccResourceMAASPackageRepository_validation(t *testing.T) {
 		"http://security.ubuntu.com/ubuntu",
 		false,
 		false,
-		[]string{"amd64", "i386"},
+		[]string{},
 		[]string{},
 		[]string{},
 		[]string{},
