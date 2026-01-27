@@ -192,7 +192,7 @@ resource "maas_package_repository" %q {
 }
 
 func testAccUbuntuPackageRepository(resourceName string, name string, key string, url string, disableSources bool, enabled bool, arches []string, disabledComponents []string, disabledPockets []string, distributions []string) string {
-	return fmt.Sprintf(`
+	resource := fmt.Sprintf(`
 resource "maas_package_repository" %q {
   name = %q
   key  = %q
@@ -201,12 +201,18 @@ resource "maas_package_repository" %q {
   disable_sources = %t
   enabled         = %t
 
-  arches = %v
   disabled_components = %v
   disabled_pockets = %v
   distributions = %v
-}
-`, resourceName, name, key, url, disableSources, enabled, listAsString(arches), listAsString(disabledComponents), listAsString(disabledPockets), listAsString(distributions))
+`, resourceName, name, key, url, disableSources, enabled, listAsString(disabledComponents), listAsString(disabledPockets), listAsString(distributions))
+
+	if len(arches) > 0 {
+		resource += fmt.Sprintf(`
+  arches = %v
+`, listAsString(arches))
+	}
+
+	return resource + "}\n"
 }
 
 func testAccPackageRepositoryCheckExists(rn string) resource.TestCheckFunc {
