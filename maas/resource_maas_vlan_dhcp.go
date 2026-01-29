@@ -224,8 +224,6 @@ func getVLANDHCPParams(d *schema.ResourceData) *entity.VLANParams {
 		vlanParams.RelayVLAN = &relayVLAN
 	}
 
-	fmt.Printf("%#v\n", vlanParams)
-
 	return &vlanParams
 }
 
