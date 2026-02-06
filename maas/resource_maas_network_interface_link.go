@@ -7,6 +7,7 @@ import (
 
 	"github.com/canonical/gomaasclient/client"
 	"github.com/canonical/gomaasclient/entity"
+	"github.com/canonical/gomaasclient/entity/node"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -206,7 +207,8 @@ func getNetworkInterfaceLinkParams(d *schema.ResourceData, subnetID int) *entity
 func createNetworkInterfaceLink(client *client.Client, machineSystemID string, networkInterface *entity.NetworkInterface, params *entity.NetworkInterfaceLinkParams) (*entity.NetworkInterfaceLink, error) {
 	// Clear existing links
 	for _, link := range networkInterface.Links {
-		_, err := client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterface.ID, link.ID)
+		err := unlinkSubnet(client, machineSystemID, networkInterface.ID, link.ID)
+		// _, err := client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterface.ID, link.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -237,6 +239,43 @@ func getNetworkInterfaceLink(client *client.Client, machineSystemID string, netw
 }
 
 func deleteNetworkInterfaceLink(client *client.Client, machineSystemID string, networkInterfaceID int, linkID int) error {
-	_, err := client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
-	return err
+	return unlinkSubnet(client, machineSystemID, networkInterfaceID, linkID)
+}
+
+func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfaceID int, linkID int) error {
+	// Interfaces may only be unlinked from subnets when the machine(s) they are attached to are in valid states.
+	// Unlinking an interface when the machine is not in a valid state is not allowed and can result errors.
+	// To address this, we introduce this handler whose job is to ensure that the machine is in a valid state before unlinking.
+	//
+	// Valid states include: New, Ready, Allocated, Broken. In other states we need to handle this operation differently,
+	// for example in transitional states compared to non-transitional states (for instance, Deploying vs. Deployed).
+	//
+	// There are four scenarios to consider:
+	// 1. The machine no longer exists. Unlinking should result in a no-op.
+	// 2. The machine is in a valid state. Unlinking is allowed.
+	// 3. The machine is in a transitional state. TBD.
+	// 4. The machine is in a non-transitional state. TBD.
+
+	// Obtain the state of the machine so we can ascertain how to handle proper unlinking
+	machine, err := client.Machine.Get(machineSystemID)
+	if err != nil {
+		// The machine doesn't or no longer exists, so this is a no-op
+		return nil
+	}
+
+	switch machine.Status {
+	case node.StatusNew, node.StatusReady, node.StatusAllocated, node.StatusBroken:
+		// This is the valid case where unlinking is straight-forward and allowed
+		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
+		return err
+	case node.StatusCommissioning: // etc.
+		// TODO: Probably want to abort active processes, then release/destroy?
+		return nil
+	case node.StatusDeployed:
+		// TODO: Destroy/release machine explicitly?
+		return nil
+
+	default:
+		return fmt.Errorf("cannot unlink subnet from machine in status %v", machine.Status)
+	}
 }
