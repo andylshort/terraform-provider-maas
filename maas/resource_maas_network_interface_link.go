@@ -239,6 +239,7 @@ func getNetworkInterfaceLink(client *client.Client, machineSystemID string, netw
 }
 
 func deleteNetworkInterfaceLink(client *client.Client, machineSystemID string, networkInterfaceID int, linkID int) error {
+	fmt.Println("-> deleting network interface link")
 	return unlinkSubnet(client, machineSystemID, networkInterfaceID, linkID)
 }
 
@@ -262,20 +263,79 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		// The machine doesn't or no longer exists, so this is a no-op
 		return nil
 	}
+	fmt.Printf("got machine status: %s\n", machine.Status)
 
 	switch machine.Status {
+
+	// Valid states
 	case node.StatusNew, node.StatusReady, node.StatusAllocated, node.StatusBroken:
 		// This is the valid case where unlinking is straight-forward and allowed
+		fmt.Println("-> machine is in a valid state")
 		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
-		return err
-	case node.StatusCommissioning: // etc.
-		// TODO: Probably want to abort active processes, then release/destroy?
-		return nil
-	case node.StatusDeployed:
-		// TODO: Destroy/release machine explicitly?
-		return nil
+		if err != nil {
+			return err
+		}
+
+	// Transitional states
+	case
+		node.StatusCommissioning,
+		node.StatusDeploying,
+		node.StatusReleasing,
+		node.StatusDiskErasing,
+		node.StatusEnteringRescureMode,
+		node.StatusExitingRescueMode,
+		node.StatusTesting:
+		// no-op. Maybe best to let it resolve first, then tell user to try again?
+		fmt.Println("-> machine is in a transitional state")
+
+		machine, err = client.Machine.Abort(machine.SystemID, "die")
+		if err != nil {
+			return err
+		}
+
+		release_params := &entity.MachineReleaseParams{}
+
+		machine, err = client.Machine.Release(machine.SystemID, release_params)
+		if err != nil {
+			return err
+		}
+
+		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
+		if err != nil {
+			return err
+		}
+
+	// Non-transitional states
+	case
+		node.StatusFailedCommissioning,
+		node.StatusMissing,
+		node.StatusReserved,
+		node.StatusDeployed,
+		node.StatusRetired,
+		node.StatusFailedDeployment,
+		node.StatusFailedReleasing,
+		node.StatusFailedDiskErasing,
+		node.StatusRescueMode,
+		node.StatusFailedEnteringRescueMode,
+		node.StatusFailedExitingRescueMode,
+		node.StatusFailedTesting:
+		fmt.Println("-> machine is in a non-transitional state")
+
+		release_params := &entity.MachineReleaseParams{}
+
+		machine, err = client.Machine.Release(machine.SystemID, release_params)
+		if err != nil {
+			return err
+		}
+
+		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
+		if err != nil {
+			return err
+		}
 
 	default:
 		return fmt.Errorf("cannot unlink subnet from machine in status %v", machine.Status)
 	}
+
+	return nil
 }

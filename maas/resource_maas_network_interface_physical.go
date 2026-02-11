@@ -8,6 +8,7 @@ import (
 
 	"github.com/canonical/gomaasclient/client"
 	"github.com/canonical/gomaasclient/entity"
+	"github.com/canonical/gomaasclient/entity/node"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -205,8 +206,75 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	if err := client.NetworkInterface.Delete(machine.SystemID, id); err != nil {
-		return diag.FromErr(err)
+	switch machine.Status {
+	case node.StatusNew, node.StatusReady, node.StatusAllocated, node.StatusBroken:
+		// This is the valid case where unlinking is straight-forward and allowed
+		fmt.Println("-> machine is in a valid state")
+
+		err = client.NetworkInterface.Delete(machine.SystemID, id)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+	// Transitional states
+	case
+		node.StatusCommissioning,
+		node.StatusDeploying,
+		node.StatusReleasing,
+		node.StatusDiskErasing,
+		node.StatusEnteringRescureMode,
+		node.StatusExitingRescueMode,
+		node.StatusTesting:
+		// no-op. Maybe best to let it resolve first, then tell user to try again?
+		fmt.Println("-> machine is in a transitional state")
+
+		machine, err = client.Machine.Abort(machine.SystemID, "die")
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		release_params := &entity.MachineReleaseParams{}
+
+		machine, err = client.Machine.Release(machine.SystemID, release_params)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		err = client.NetworkInterface.Delete(machine.SystemID, id)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+	// Non-transitional states
+	case
+		node.StatusFailedCommissioning,
+		node.StatusMissing,
+		node.StatusReserved,
+		node.StatusDeployed,
+		node.StatusRetired,
+		node.StatusFailedDeployment,
+		node.StatusFailedReleasing,
+		node.StatusFailedDiskErasing,
+		node.StatusRescueMode,
+		node.StatusFailedEnteringRescueMode,
+		node.StatusFailedExitingRescueMode,
+		node.StatusFailedTesting:
+		fmt.Println("-> machine is in a non-transitional state")
+
+		release_params := &entity.MachineReleaseParams{}
+
+		machine, err = client.Machine.Release(machine.SystemID, release_params)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		err = client.NetworkInterface.Delete(machine.SystemID, id)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+	default:
+		return nil // fmt.Errorf("cannot unlink subnet from machine in status %v", machine.Status)
 	}
 
 	return nil
