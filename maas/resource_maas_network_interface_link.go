@@ -238,7 +238,6 @@ func getNetworkInterfaceLink(client *client.Client, machineSystemID string, netw
 }
 
 func deleteNetworkInterfaceLink(client *client.Client, machineSystemID string, networkInterfaceID int, linkID int) error {
-	fmt.Println("-> deleting network interface link")
 	return unlinkSubnet(client, machineSystemID, networkInterfaceID, linkID)
 }
 
