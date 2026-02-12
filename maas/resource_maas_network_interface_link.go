@@ -208,7 +208,6 @@ func createNetworkInterfaceLink(client *client.Client, machineSystemID string, n
 	// Clear existing links
 	for _, link := range networkInterface.Links {
 		err := unlinkSubnet(client, machineSystemID, networkInterface.ID, link.ID)
-		// _, err := client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterface.ID, link.ID)
 		if err != nil {
 			return nil, err
 		}
