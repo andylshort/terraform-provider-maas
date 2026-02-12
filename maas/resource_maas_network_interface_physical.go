@@ -209,72 +209,15 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 	switch machine.Status {
 	case node.StatusNew, node.StatusReady, node.StatusAllocated, node.StatusBroken:
 		// This is the valid case where unlinking is straight-forward and allowed
-		fmt.Println("-> machine is in a valid state")
-
-		err = client.NetworkInterface.Delete(machine.SystemID, id)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-	// Transitional states
-	case
-		node.StatusCommissioning,
-		node.StatusDeploying,
-		node.StatusReleasing,
-		node.StatusDiskErasing,
-		node.StatusEnteringRescureMode,
-		node.StatusExitingRescueMode,
-		node.StatusTesting:
-		// no-op. Maybe best to let it resolve first, then tell user to try again?
-		fmt.Println("-> machine is in a transitional state")
-
-		machine, err = client.Machine.Abort(machine.SystemID, "die")
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		release_params := &entity.MachineReleaseParams{}
-
-		machine, err = client.Machine.Release(machine.SystemID, release_params)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		err = client.NetworkInterface.Delete(machine.SystemID, id)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-	// Non-transitional states
-	case
-		node.StatusFailedCommissioning,
-		node.StatusMissing,
-		node.StatusReserved,
-		node.StatusDeployed,
-		node.StatusRetired,
-		node.StatusFailedDeployment,
-		node.StatusFailedReleasing,
-		node.StatusFailedDiskErasing,
-		node.StatusRescueMode,
-		node.StatusFailedEnteringRescueMode,
-		node.StatusFailedExitingRescueMode,
-		node.StatusFailedTesting:
-		fmt.Println("-> machine is in a non-transitional state")
-
-		release_params := &entity.MachineReleaseParams{}
-
-		machine, err = client.Machine.Release(machine.SystemID, release_params)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		err = client.NetworkInterface.Delete(machine.SystemID, id)
+		// Choose not to delete it, rather disconnect, as it's a hardware resource and would need the machine it's attached to being commissioned again.
+		_, err = client.NetworkInterface.Disconnect(machine.SystemID, id)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
 	default:
-		return nil // fmt.Errorf("cannot unlink subnet from machine in status %v", machine.Status)
+		// When not valid, it's a no-op
+		break
 	}
 
 	return nil
