@@ -260,17 +260,13 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 	// Obtain the state of the machine so we can ascertain how to handle proper unlinking
 	machine, err := client.Machine.Get(machineSystemID)
 	if err != nil {
-		// The machine doesn't or no longer exists, so this is a no-op
-		return nil
+		return nil //nolint:nilerr // The machine doesn't or no longer exists, so this is a no-op
 	}
-	fmt.Printf("got machine status: %s\n", machine.Status)
 
 	switch machine.Status {
-
 	// Valid states
 	case node.StatusNew, node.StatusReady, node.StatusAllocated, node.StatusBroken:
 		// This is the valid case where unlinking is straight-forward and allowed
-		fmt.Println("-> machine is in a valid state")
 		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
 		if err != nil {
 			return err
@@ -285,17 +281,16 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		node.StatusEnteringRescureMode,
 		node.StatusExitingRescueMode,
 		node.StatusTesting:
-		// no-op. Maybe best to let it resolve first, then tell user to try again?
-		fmt.Println("-> machine is in a transitional state")
+		eventLogMsg := fmt.Sprintf("Terraform requested machine %s be destroyed. Aborting current operation...", machine.SystemID)
 
-		machine, err = client.Machine.Abort(machine.SystemID, "die")
+		machine, err = client.Machine.Abort(machine.SystemID, eventLogMsg)
 		if err != nil {
 			return err
 		}
 
-		release_params := &entity.MachineReleaseParams{}
+		releaseParams := &entity.MachineReleaseParams{}
 
-		machine, err = client.Machine.Release(machine.SystemID, release_params)
+		_, err = client.Machine.Release(machine.SystemID, releaseParams)
 		if err != nil {
 			return err
 		}
@@ -319,11 +314,9 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		node.StatusFailedEnteringRescueMode,
 		node.StatusFailedExitingRescueMode,
 		node.StatusFailedTesting:
-		fmt.Println("-> machine is in a non-transitional state")
+		releaseParams := &entity.MachineReleaseParams{}
 
-		release_params := &entity.MachineReleaseParams{}
-
-		machine, err = client.Machine.Release(machine.SystemID, release_params)
+		_, err = client.Machine.Release(machine.SystemID, releaseParams)
 		if err != nil {
 			return err
 		}
@@ -334,6 +327,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		}
 
 	default:
+		// node.StatusDefault is left over
 		return fmt.Errorf("cannot unlink subnet from machine in status %v", machine.Status)
 	}
 
