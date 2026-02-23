@@ -263,7 +263,12 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 
 	switch machine.Status {
 	// Valid states
-	case node.StatusNew, node.StatusReady, node.StatusAllocated, node.StatusBroken:
+	case
+		node.StatusNew,
+		node.StatusReady,
+		node.StatusAllocated,
+		node.StatusBroken,
+		node.StatusFailedTesting:
 		// This is the valid case where unlinking is straight-forward and allowed
 		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
 		if err != nil {
@@ -279,39 +284,18 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		node.StatusEnteringRescureMode,
 		node.StatusExitingRescueMode,
 		node.StatusTesting:
-		eventLogMsg := fmt.Sprintf("Terraform requested machine %s be destroyed. Aborting current operation...", machine.SystemID)
-
-		machine, err = client.Machine.Abort(machine.SystemID, eventLogMsg)
-		if err != nil {
-			return err
-		}
-
-		releaseParams := &entity.MachineReleaseParams{}
-
-		_, err = client.Machine.Release(machine.SystemID, releaseParams)
-		if err != nil {
-			return err
-		}
-
-		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("cannot unlink subnet while machine %s in transitional state %v", machine.SystemID, machine.Status)
 
 	// Non-transitional states
 	case
 		node.StatusFailedCommissioning,
 		node.StatusMissing,
-		node.StatusReserved,
-		node.StatusDeployed,
 		node.StatusRetired,
 		node.StatusFailedDeployment,
 		node.StatusFailedReleasing,
 		node.StatusFailedDiskErasing,
-		node.StatusRescueMode,
 		node.StatusFailedEnteringRescueMode,
-		node.StatusFailedExitingRescueMode,
-		node.StatusFailedTesting:
+		node.StatusFailedExitingRescueMode:
 		releaseParams := &entity.MachineReleaseParams{}
 
 		_, err = client.Machine.Release(machine.SystemID, releaseParams)
@@ -324,9 +308,17 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 			return err
 		}
 
+	// Intentionally-selected states
+	// A machine is likely in one of these states if an admin placed it in this state intentionally.
+	case
+		node.StatusDeployed,
+		node.StatusReserved,
+		node.StatusRescueMode:
+		return fmt.Errorf("cannot unlink subnet while machine %s is deployed, reserved, or in rescue mode (current status: %v)", machine.SystemID, machine.Status)
+
 	default:
 		// node.StatusDefault is left over
-		return fmt.Errorf("cannot unlink subnet from machine in status %v", machine.Status)
+		return fmt.Errorf("cannot unlink subnet from machine %s in status %v", machine.SystemID, machine.Status)
 	}
 
 	return nil

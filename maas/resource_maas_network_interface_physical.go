@@ -207,7 +207,12 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 	}
 
 	switch machine.Status {
-	case node.StatusNew, node.StatusReady, node.StatusAllocated, node.StatusBroken:
+	case
+		node.StatusNew,
+		node.StatusReady,
+		node.StatusAllocated,
+		node.StatusBroken,
+		node.StatusFailedTesting:
 		// This is the valid case where unlinking is straight-forward and allowed
 		// Choose not to delete it, rather disconnect, as it's a hardware resource and would need the machine it's attached to being commissioned again.
 		_, err = client.NetworkInterface.Disconnect(machine.SystemID, id)
