@@ -281,7 +281,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		node.StatusDeploying,
 		node.StatusReleasing,
 		node.StatusDiskErasing,
-		node.StatusEnteringRescureMode,
+		node.StatusEnteringRescueMode,
 		node.StatusExitingRescueMode,
 		node.StatusTesting:
 		return fmt.Errorf("cannot unlink subnet while machine %s in transitional state %v", machine.SystemID, machine.Status)
