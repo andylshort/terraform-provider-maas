@@ -249,11 +249,12 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 	// Valid states include: New, Ready, Allocated, Broken. In other states we need to handle this operation differently,
 	// for example in transitional states compared to non-transitional states (for instance, Deploying vs. Deployed).
 	//
-	// There are four scenarios to consider:
+	// There are five scenarios to consider:
 	// 1. The machine no longer exists. Unlinking should result in a no-op.
 	// 2. The machine is in a valid state. Unlinking is allowed.
 	// 3. The machine is in a transitional state.
 	// 4. The machine is in a non-transitional state.
+	// 5. The machine is in a manually-selected state.
 
 	// Obtain the state of the machine so we can ascertain how to handle proper unlinking
 	machine, err := client.Machine.Get(machineSystemID)
@@ -290,14 +291,11 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		node.StatusFailedCommissioning,
 		node.StatusMissing,
 		node.StatusRetired,
-		node.StatusFailedDeployment,
-		node.StatusFailedReleasing,
-		node.StatusFailedDiskErasing,
 		node.StatusFailedEnteringRescueMode,
-		node.StatusFailedExitingRescueMode:
-		releaseParams := &entity.MachineReleaseParams{}
-
-		_, err = client.Machine.Release(machine.SystemID, releaseParams)
+		node.StatusFailedExitingRescueMode,
+		node.StatusFailedDeployment,
+		node.StatusFailedDiskErasing:
+		_, err := client.Machine.MarkBroken(machine.SystemID, "Marked broken by Terraform to unlink subnet from the interface")
 		if err != nil {
 			return err
 		}
@@ -306,6 +304,10 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		if err != nil {
 			return err
 		}
+
+	case node.StatusFailedReleasing:
+		// TODO: If we can't release, can we still mark broken?
+		return nil
 
 	// Intentionally-selected states
 	// A machine is likely in one of these states if an admin placed it in this state intentionally.
