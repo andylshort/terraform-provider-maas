@@ -207,7 +207,7 @@ func getNetworkInterfaceLinkParams(d *schema.ResourceData, subnetID int) *entity
 func createNetworkInterfaceLink(client *client.Client, machineSystemID string, networkInterface *entity.NetworkInterface, params *entity.NetworkInterfaceLinkParams) (*entity.NetworkInterfaceLink, error) {
 	// Clear existing links
 	for _, link := range networkInterface.Links {
-		err := unlinkSubnet(client, machineSystemID, networkInterface.ID, link.ID)
+		_, err := client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterface.ID, link.ID)
 		if err != nil {
 			return nil, err
 		}
