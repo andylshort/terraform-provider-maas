@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/canonical/gomaasclient/entity"
+	"github.com/canonical/gomaasclient/entity/node"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -195,17 +196,41 @@ func resourceNetworkInterfaceVLANDelete(ctx context.Context, d *schema.ResourceD
 	client := meta.(*ClientConfig).Client
 
 	machine, err := getMachine(client, d.Get("machine").(string))
-	if err != nil {
-		return diag.FromErr(err)
+	if err != nil && !strings.Contains(err.Error(), "404 Not Found") {
+		return nil
 	}
 
-	id, err := strconv.Atoi(d.Id())
+	fabric, err := getFabric(client, d.Get("fabric").(string))
 	if err != nil {
-		return diag.FromErr(err)
+		return nil
 	}
 
-	if err := client.NetworkInterface.Delete(machine.SystemID, id); err != nil {
-		return diag.FromErr(err)
+	vlan, err := getVLAN(client, fabric.ID, d.Get("vlan").(string))
+	if err != nil {
+		return nil
+	}
+
+	switch machine.Status {
+	/* Valid states:
+	- node.StatusNew
+	- node.StatusReady
+	- node.StatusAllocated
+	- node.StatusBroken
+	- node.StatusFailedTesting
+	*/
+	case
+		node.StatusNew,
+		node.StatusReady,
+		node.StatusAllocated,
+		node.StatusBroken,
+		node.StatusFailedTesting:
+
+		if err := client.NetworkInterface.Delete(machine.SystemID, vlan.ID); err != nil {
+			return diag.FromErr(err)
+		}
+
+	default:
+		return nil
 	}
 
 	return nil

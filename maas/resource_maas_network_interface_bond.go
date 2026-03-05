@@ -9,6 +9,7 @@ import (
 
 	"github.com/canonical/gomaasclient/client"
 	"github.com/canonical/gomaasclient/entity"
+	"github.com/canonical/gomaasclient/entity/node"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -249,16 +250,37 @@ func resourceNetworkInterfaceBondDelete(ctx context.Context, d *schema.ResourceD
 
 	machine, err := getMachine(client, d.Get("machine").(string))
 	if err != nil {
-		return diag.FromErr(err)
+		return nil
 	}
+
+	// TODO: Check if bond has been deleted already or is missing
 
 	id, err := strconv.Atoi(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	if err := client.NetworkInterface.Delete(machine.SystemID, id); err != nil {
-		return diag.FromErr(err)
+	switch machine.Status {
+	/* Valid states:
+	- node.StatusNew
+	- node.StatusReady
+	- node.StatusAllocated
+	- node.StatusBroken
+	- node.StatusFailedTesting
+	*/
+	case
+		node.StatusNew,
+		node.StatusReady,
+		node.StatusAllocated,
+		node.StatusBroken,
+		node.StatusFailedTesting:
+
+		if err := client.NetworkInterface.Delete(machine.SystemID, id); err != nil {
+			return diag.FromErr(err)
+		}
+
+	default:
+		return nil
 	}
 
 	return nil
