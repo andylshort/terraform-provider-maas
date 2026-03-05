@@ -201,9 +201,10 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	id, err := strconv.Atoi(d.Id())
+	// Perform a no-op in the event the physical interface doesn't exist any more.
+	iface, err := getNetworkInterfacePhysical(client, machine.SystemID, d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return nil
 	}
 
 	switch machine.Status {
@@ -215,7 +216,7 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 		node.StatusFailedTesting:
 		// This is the valid case where unlinking is straight-forward and allowed
 		// Choose not to delete it, rather disconnect, as it's a hardware resource and would need the machine it's attached to being commissioned again.
-		_, err = client.NetworkInterface.Disconnect(machine.SystemID, id)
+		_, err = client.NetworkInterface.Disconnect(machine.SystemID, iface.ID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
