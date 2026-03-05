@@ -198,7 +198,7 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 
 	machine, err := getMachine(client, d.Get("machine").(string))
 	if err != nil && !strings.Contains(err.Error(), "404 Not Found") {
-		return diag.FromErr(err)
+		return nil
 	}
 
 	// Perform a no-op in the event the physical interface doesn't exist any more.
