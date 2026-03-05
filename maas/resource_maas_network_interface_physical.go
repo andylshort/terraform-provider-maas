@@ -197,7 +197,7 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 	client := meta.(*ClientConfig).Client
 
 	machine, err := getMachine(client, d.Get("machine").(string))
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "404 Not Found") {
 		return diag.FromErr(err)
 	}
 
