@@ -294,21 +294,23 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		return fmt.Errorf("cannot unlink subnet while machine %s is deployed, reserved, or in rescue mode (current status: %s)", machine.SystemID, machine.StatusName)
 
 	/* Valid states:
-	- node.StatusNew,
-	- node.StatusReady,
-	- node.StatusAllocated,
-	- node.StatusBroken,
-	- node.StatusFailedTesting:
-	*/
+	- node.StatusNew
+	- node.StatusReady
+	- node.StatusAllocated
+	- node.StatusBroken
+	- node.StatusFailedTesting
 
-	/* Transitional states:
-	- node.StatusCommissioning,
-	- node.StatusDeploying,
-	- node.StatusReleasing,
-	- node.StatusDiskErasing,
-	- node.StatusEnteringRescueMode,
-	- node.StatusExitingRescueMode,
-	- node.StatusTesting:
+	Transitional states:
+	- node.StatusCommissioning
+	- node.StatusDeploying
+	- node.StatusReleasing
+	- node.StatusDiskErasing
+	- node.StatusEnteringRescueMode
+	- node.StatusExitingRescueMode
+	- node.StatusTesting
+
+	Other:
+	- node.StatusDefault
 	*/
 	default:
 		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
