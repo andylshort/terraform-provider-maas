@@ -315,7 +315,6 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("cannot unlink subnet while machine %s in transitional state %s", machine.SystemID, machine.StatusName)
 	}
 
 	return nil
