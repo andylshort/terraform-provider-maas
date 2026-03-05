@@ -260,7 +260,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 	// Obtain the state of the machine so we can ascertain how to handle proper unlinking
 	machine, err := client.Machine.Get(machineSystemID)
 	if err != nil && !strings.Contains(err.Error(), "404 Not Found") {
-		return nil //nolint:nilerr // The machine doesn't or no longer exists, so this is a no-op
+		return nil
 	}
 
 	// TODO: If link or subnet does not exist, no-op
@@ -275,7 +275,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		node.StatusFailedExitingRescueMode,
 		node.StatusFailedDeployment,
 		node.StatusFailedDiskErasing:
-		_, err := client.Machine.MarkBroken(machine.SystemID, "Marked broken by Terraform to unlink subnet from the interface")
+		_, err = client.Machine.MarkBroken(machine.SystemID, "Marked broken by Terraform to unlink subnet from the interface")
 		if err != nil {
 			return err
 		}
