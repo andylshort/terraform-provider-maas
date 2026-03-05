@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/canonical/gomaasclient/client"
 	"github.com/canonical/gomaasclient/entity"
@@ -246,7 +247,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 	// Unlinking an interface when the machine is not in a valid state is not allowed and can result in errors.
 	// To address this, we introduce this handler whose job is to ensure that the machine is in a valid state before unlinking.
 	//
-	// Valid states include: New, Ready, Allocated, Broken. In other states we need to handle this operation differently,
+	// Valid states include: New, Ready, Allocated, Broken, FailedTesting. In other states we need to handle this operation differently,
 	// for example in transitional states compared to non-transitional states (for instance, Deploying vs. Deployed).
 	//
 	// There are five scenarios to consider:
@@ -258,34 +259,13 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 
 	// Obtain the state of the machine so we can ascertain how to handle proper unlinking
 	machine, err := client.Machine.Get(machineSystemID)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "404 Not Found") {
 		return nil //nolint:nilerr // The machine doesn't or no longer exists, so this is a no-op
 	}
 
+	// TODO: If link or subnet does not exist, no-op
+
 	switch machine.Status {
-	// Valid states
-	case
-		node.StatusNew,
-		node.StatusReady,
-		node.StatusAllocated,
-		node.StatusBroken,
-		node.StatusFailedTesting:
-		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
-		if err != nil {
-			return err
-		}
-
-	// Transitional states
-	case
-		node.StatusCommissioning,
-		node.StatusDeploying,
-		node.StatusReleasing,
-		node.StatusDiskErasing,
-		node.StatusEnteringRescueMode,
-		node.StatusExitingRescueMode,
-		node.StatusTesting:
-		return fmt.Errorf("cannot unlink subnet while machine %s in transitional state %s", machine.SystemID, machine.StatusName)
-
 	// Non-transitional states
 	case
 		node.StatusFailedCommissioning,
@@ -305,10 +285,6 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 			return err
 		}
 
-	case node.StatusFailedReleasing:
-		// TODO: If we can't release, can we still mark broken?
-		return nil
-
 	// Intentionally-selected states
 	// A machine is likely in one of these states if an admin placed it in this state intentionally.
 	case
@@ -317,9 +293,29 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		node.StatusRescueMode:
 		return fmt.Errorf("cannot unlink subnet while machine %s is deployed, reserved, or in rescue mode (current status: %s)", machine.SystemID, machine.StatusName)
 
+	/* Valid states:
+	- node.StatusNew,
+	- node.StatusReady,
+	- node.StatusAllocated,
+	- node.StatusBroken,
+	- node.StatusFailedTesting:
+	*/
+
+	/* Transitional states:
+	- node.StatusCommissioning,
+	- node.StatusDeploying,
+	- node.StatusReleasing,
+	- node.StatusDiskErasing,
+	- node.StatusEnteringRescueMode,
+	- node.StatusExitingRescueMode,
+	- node.StatusTesting:
+	*/
 	default:
-		// node.StatusDefault is left over
-		return fmt.Errorf("cannot unlink subnet from machine %s in status %s", machine.SystemID, machine.StatusName)
+		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("cannot unlink subnet while machine %s in transitional state %s", machine.SystemID, machine.StatusName)
 	}
 
 	return nil
