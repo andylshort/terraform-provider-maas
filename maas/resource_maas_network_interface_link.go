@@ -251,7 +251,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 	// for example in transitional states compared to non-transitional states (for instance, Deploying vs. Deployed).
 	//
 	// There are five scenarios to consider:
-	// 1. The machine no longer exists. Unlinking should result in a no-op.
+	// 1. The machine or link no longer exists. Unlinking should result in a no-op.
 	// 2. The machine is in a valid state. Unlinking is allowed.
 	// 3. The machine is in a transitional state.
 	// 4. The machine is in a non-transitional state.
@@ -263,7 +263,10 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 		return nil
 	}
 
-	// TODO: If link or subnet does not exist, no-op
+	link, err := getNetworkInterfaceLink(client, machineSystemID, networkInterfaceID, linkID)
+	if err != nil {
+		return nil
+	}
 
 	switch machine.Status {
 	// Non-transitional states
@@ -280,7 +283,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 			return err
 		}
 
-		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
+		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, link.ID)
 		if err != nil {
 			return err
 		}
@@ -313,7 +316,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 	- node.StatusDefault
 	*/
 	default:
-		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, linkID)
+		_, err = client.NetworkInterface.UnlinkSubnet(machineSystemID, networkInterfaceID, link.ID)
 		if err != nil {
 			return err
 		}
