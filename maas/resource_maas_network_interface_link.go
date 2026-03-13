@@ -288,7 +288,7 @@ func unlinkSubnet(client *client.Client, machineSystemID string, networkInterfac
 			return err
 		}
 
-	// Intentionally-selected states
+	// Manually-selected states
 	// A machine is likely in one of these states if an admin placed it in this state intentionally.
 	case
 		node.StatusDeployed,

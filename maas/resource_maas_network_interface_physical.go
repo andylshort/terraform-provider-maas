@@ -208,21 +208,59 @@ func resourceNetworkInterfacePhysicalDelete(ctx context.Context, d *schema.Resou
 	}
 
 	switch machine.Status {
+	// Non-transitional states
 	case
-		node.StatusNew,
-		node.StatusReady,
-		node.StatusAllocated,
-		node.StatusBroken,
-		node.StatusFailedTesting:
+		node.StatusFailedCommissioning,
+		node.StatusMissing,
+		node.StatusRetired,
+		node.StatusFailedEnteringRescueMode,
+		node.StatusFailedExitingRescueMode,
+		node.StatusFailedDeployment,
+		node.StatusFailedDiskErasing:
+		_, err = client.Machine.MarkBroken(machine.SystemID, "Marked broken by Terraform to unlink subnet from the interface")
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
 		// Choose not to delete it, rather disconnect, as it's a hardware resource and would need the machine it's attached to being commissioned again.
 		_, err = client.NetworkInterface.Disconnect(machine.SystemID, iface.ID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
+	// Manually-selected states
+	// A machine is likely in one of these states if an admin placed it in this state intentionally.
+	case
+		node.StatusDeployed,
+		node.StatusReserved,
+		node.StatusRescueMode:
+		return diag.Errorf("cannot unlink subnet while machine %s is deployed, reserved, or in rescue mode (current status: %s)", machine.SystemID, machine.StatusName)
+
+	/* Valid states:
+	- node.StatusNew
+	- node.StatusReady
+	- node.StatusAllocated
+	- node.StatusBroken
+	- node.StatusFailedTesting
+
+	Transitional states:
+	- node.StatusCommissioning
+	- node.StatusDeploying
+	- node.StatusReleasing
+	- node.StatusDiskErasing
+	- node.StatusEnteringRescueMode
+	- node.StatusExitingRescueMode
+	- node.StatusTesting
+
+	Other:
+	- node.StatusDefault
+	*/
 	default:
-		// When not valid, it's a no-op
-		break
+		// Choose not to delete it, rather disconnect, as it's a hardware resource and would need the machine it's attached to being commissioned again.
+		_, err = client.NetworkInterface.Disconnect(machine.SystemID, iface.ID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil
